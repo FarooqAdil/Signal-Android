@@ -366,6 +366,9 @@ android {
 
       buildConfigField("String", "BUILD_VARIANT_TYPE", "\"Debug\"")
       buildConfigField("boolean", "LINK_DEVICE_UX_ENABLED", "true")
+
+      // MSc Research - enable libsignal debug-level diagnostics
+      buildConfigField("int", "LIBSIGNAL_LOG_LEVEL", "org.signal.libsignal.protocol.logging.SignalProtocolLogger.DEBUG")
     }
 
     getByName("release") {
