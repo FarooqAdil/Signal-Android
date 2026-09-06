@@ -149,6 +149,11 @@ import io.reactivex.rxjava3.schedulers.Schedulers;
 import kotlin.Unit;
 import rxdogtag2.RxDogTag;
 
+// Security Telemetry Observation Research addition: imports
+import org.thoughtcrime.securesms.research.security.observation.SecurityTelemetryEngine;
+import static org.thoughtcrime.securesms.research.security.observation.SecurityTelemetryEngineKt.INFO_TAG;
+// End Security Telemetry Observation Research addition
+
 /**
  * Will be called once when the TextSecure process is created.
  * <p>
@@ -191,6 +196,15 @@ public class ApplicationContext extends Application implements AppForegroundObse
               })
               .addBlocking("security-provider", this::initializeSecurityProvider)
               .addBlocking("app-dependencies", this::initializeAppDependencies)
+              
+              // Security Telemetry Observation Research addition:
+              // Adds a call to initialize the framework that is executed during the app startup
+              .addBlocking("security-telemetry", () -> {
+                Log.i(INFO_TAG, "Framework initialization about to be called");
+                SecurityTelemetryEngine.INSTANCE.initialize(); 
+              })
+              // End Security Telemetry Observation Research addition
+              
               .addBlocking("anr-detector", this::startAnrDetector)
               .addBlocking("crash-handling", this::initializeCrashHandling)
               .addBlocking("rx-init", this::initializeRx)
@@ -268,6 +282,14 @@ public class ApplicationContext extends Application implements AppForegroundObse
   public void onForeground() {
     long startTime = System.currentTimeMillis();
     Log.i(TAG, "App is now visible. Battery: " + DeviceProperties.getBatteryLevel(this) + "% (charging: " + DeviceProperties.isCharging(this) + ")");
+
+
+    // Security Telemetry Observation Research addition:
+    // Sets the flag indicating the application has foregrounded
+    Log.i(INFO_TAG, "Application foregrounded: setting flag for config dialog");
+    SecurityTelemetryEngine.INSTANCE.onAppForegrounded();
+    // End Security Telemetry Observation Research addition
+
 
     BatterySnapshotTracker.emit(this, "foreground");
 

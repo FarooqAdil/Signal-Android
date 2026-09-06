@@ -23,6 +23,13 @@ import org.thoughtcrime.securesms.util.dynamiclanguage.DynamicLanguageContextWra
 
 import java.util.Objects;
 
+// Security Telemetry Observation Research addition: imports
+import androidx.lifecycle.Lifecycle;
+import org.thoughtcrime.securesms.research.security.observation.FrameworkConfigDialog;
+import org.thoughtcrime.securesms.research.security.observation.SecurityTelemetryEngine;
+import static org.thoughtcrime.securesms.research.security.observation.SecurityTelemetryEngineKt.INFO_TAG;
+// End Security Telemetry Observation Research addition
+
 /**
  * Base class for all activities. The vast majority of activities shouldn't extend this directly.
  * Instead, they should extend {@link PassphraseRequiredActivity} so they're protected by
@@ -44,6 +51,21 @@ public abstract class BaseActivity extends AppCompatActivity {
   protected void onResume() {
     super.onResume();
     WindowUtil.initializeScreenshotSecurity(this, getWindow());
+    
+    // Security Telemetry Observation Research addition:
+    // Posts the code in order to allow the onResume() call stack to finish full execution
+    // At execution, it checks the activity is still active, then
+    // consumes the flag and shows the dialog.
+    getWindow().getDecorView().post(() -> {
+
+      if (!isFinishing() && !isDestroyed() &&
+          getLifecycle().getCurrentState().isAtLeast(Lifecycle.State.RESUMED) &&
+          SecurityTelemetryEngine.INSTANCE.consumePendingConfigDialog()) {
+        Log.i(INFO_TAG, "Showing config dialog");
+        FrameworkConfigDialog.INSTANCE.show(this);
+      }
+    });
+    // End Security Telemetry Observation Research addition
   }
 
   @Override
