@@ -19,6 +19,11 @@ internal object FrameworkConfig {
     internal var shareFullTelemetry = false // share all security telemetry with Signal
 
   }
+  
+  // Initialized with defaults for dev purposes
+  internal object Development {
+    internal var showNegativeFindings = false
+  }
 
   // Initialized with defaults
   internal object Simulate {
@@ -31,6 +36,7 @@ internal object FrameworkConfig {
   fun productionDemo() {
     Production.observeSecurityTelemetry = true
     Production.showSecurityAlerts = true
+    Development.showNegativeFindings = true //temp
     //Production.basicReporting = true
     Log.i(INFO_TAG, "Demo config defaults set")
   }

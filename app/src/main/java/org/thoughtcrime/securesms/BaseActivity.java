@@ -28,6 +28,7 @@ import androidx.lifecycle.Lifecycle;
 import org.thoughtcrime.securesms.research.security.observation.FrameworkConfigDialog;
 import org.thoughtcrime.securesms.research.security.observation.SecurityTelemetryEngine;
 import static org.thoughtcrime.securesms.research.security.observation.SecurityTelemetryEngineKt.INFO_TAG;
+import org.thoughtcrime.securesms.research.security.observation.SecurityFindingDialogKt;
 // End Security Telemetry Observation Research addition
 
 /**
@@ -59,14 +60,29 @@ public abstract class BaseActivity extends AppCompatActivity {
     getWindow().getDecorView().post(() -> {
 
       if (!isFinishing() && !isDestroyed() &&
-          getLifecycle().getCurrentState().isAtLeast(Lifecycle.State.RESUMED) &&
-          SecurityTelemetryEngine.INSTANCE.consumePendingConfigDialog()) {
-        Log.i(INFO_TAG, "Showing config dialog");
-        FrameworkConfigDialog.INSTANCE.show(this);
+          getLifecycle().getCurrentState().isAtLeast(Lifecycle.State.RESUMED)) {
+        if (!SecurityFindingDialogKt.isFindingDialogShowing() &&
+            SecurityTelemetryEngine.INSTANCE.consumePendingConfigDialog()) {
+          Log.i(INFO_TAG, "Showing config dialog");
+          FrameworkConfigDialog.INSTANCE.show(this);
+        }
+
+        SecurityFindingDialogKt.onActivityResumed(this);
       }
     });
     // End Security Telemetry Observation Research addition
   }
+
+
+  // Security Telemetry Observation Research addition:
+  // Remove this Activity as a possible security finding dialog host when it pauses.
+  @Override
+  protected void onPause() {
+    SecurityFindingDialogKt.onActivityPaused(this);
+    super.onPause();
+  }
+  // End Security Telemetry Observation Research addition
+
 
   @Override
   protected void onStart() {

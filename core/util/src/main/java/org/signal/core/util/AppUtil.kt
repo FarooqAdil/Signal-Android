@@ -25,6 +25,7 @@ object AppUtil {
    */
   @JvmStatic
   fun restart(context: Context) {
+    Log.i(TAG, "[SecurityTelemetry] Signal process restarting")
     val launchIntent = context.packageManager.getLaunchIntentForPackage(context.packageName)?.apply {
       addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
     }

@@ -16,6 +16,8 @@ internal object FrameworkConfigDialog {
     "[PROD] Report suspicious users",
     "[PROD] Share security logs",
     "[PROD] Share security-relevant events",
+    "[DEV] Show negative findings",
+    "[DEV] Fire framework self-test (20s)",
     "[SIM] Simulate receipt overload"
   )
 
@@ -32,6 +34,8 @@ internal object FrameworkConfigDialog {
       FrameworkConfig.Production.reportUsers,
       FrameworkConfig.Production.shareLogs,
       FrameworkConfig.Production.shareFullTelemetry,
+      FrameworkConfig.Development.showNegativeFindings,
+      false,
       FrameworkConfig.Simulate.receiptOverload
     )
 
@@ -40,12 +44,17 @@ internal object FrameworkConfigDialog {
       .setMultiChoiceItems(labels, selected) { _, index, checked ->
         selected[index] = checked
       }
+      .setNeutralButton("RESTART Signal Process") { _, _ -> 
+        Log.i(INFO_TAG, "Restart Signal process requested") 
+        SecurityTelemetryEngine.clearFrameworkAndRestartSignal(activity)
+      }
       .setNegativeButton("Cancel", null)
       .setPositiveButton("Apply") { _, _ ->
         applyConfig(selected)
       }.setOnDismissListener {
         dialogShowing = false
         Log.i(INFO_TAG, "Config dialog dismissed")
+        onFrameworkConfigDismissed(activity)
       }
       .show()
     Log.i(INFO_TAG, "Dialog shown")
@@ -60,8 +69,18 @@ internal object FrameworkConfigDialog {
     FrameworkConfig.Production.reportUsers = selected[3]
     FrameworkConfig.Production.shareLogs = selected[4]
     FrameworkConfig.Production.shareFullTelemetry = selected[5]
-    FrameworkConfig.Simulate.receiptOverload = selected[6]
+    FrameworkConfig.Development.showNegativeFindings = selected[6]
+    if (selected[7]) {
+      Log.i(INFO_TAG, "Framework self-test requested from config dialog")
+      SecuritySimulationController.fireSelfTest()
+    }
+    FrameworkConfig.Simulate.receiptOverload = selected[8]
 
     Log.i(INFO_TAG, "Config applied")
+  }
+  
+  // Is the dialog currently showing
+  fun isShowing(): Boolean {
+    return dialogShowing
   }
 }

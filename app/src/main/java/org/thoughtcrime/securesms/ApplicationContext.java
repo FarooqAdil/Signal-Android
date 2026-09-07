@@ -201,7 +201,7 @@ public class ApplicationContext extends Application implements AppForegroundObse
               // Adds a call to initialize the framework that is executed during the app startup
               .addBlocking("security-telemetry", () -> {
                 Log.i(INFO_TAG, "Framework initialization about to be called");
-                SecurityTelemetryEngine.INSTANCE.initialize(); 
+                SecurityTelemetryEngine.INSTANCE.initialize(this); 
               })
               // End Security Telemetry Observation Research addition
               
@@ -333,6 +333,13 @@ public class ApplicationContext extends Application implements AppForegroundObse
   @Override
   public void onBackground() {
     Log.i(TAG, "App is no longer visible.");
+
+    // Security Telemetry Observation Research addition:
+    // Background/foreground state tracking
+    Log.i(INFO_TAG, "Application backgrounded: notifying security telemetry engine");
+    SecurityTelemetryEngine.INSTANCE.onAppBackgrounded();
+    // End Security Telemetry Observation Research addition
+
     BatterySnapshotTracker.emit(this, "background");
     KeyCachingService.onAppBackgrounded(this);
     AppDependencies.getMessageNotifier().clearVisibleThread();
