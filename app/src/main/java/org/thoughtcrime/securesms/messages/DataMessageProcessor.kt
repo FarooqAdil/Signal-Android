@@ -119,6 +119,17 @@ import java.util.UUID
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
 
+// Security Telemetry Observation Research addition: imports
+import android.os.SystemClock
+import org.thoughtcrime.securesms.research.security.observation.ERROR_TAG
+import org.thoughtcrime.securesms.research.security.observation.INFO_TAG
+import org.thoughtcrime.securesms.research.security.observation.ReceiptSecurityEvent
+import org.thoughtcrime.securesms.research.security.observation.ReceiptTriggerCategory
+import org.thoughtcrime.securesms.research.security.observation.ReceiptType
+import org.thoughtcrime.securesms.research.security.observation.SecurityTelemetryEngine
+// End Security Telemetry Observation Research addition
+
+
 object DataMessageProcessor {
 
   internal const val BODY_RANGE_PROCESSING_LIMIT = 250
@@ -217,6 +228,41 @@ object DataMessageProcessor {
 
     if (metadata.sealedSender && messageId != null) {
       batchCache.addDeliveryReceipt(senderRecipient.id, groupId, message.timestamp!!, messageId)
+      
+      // Security Telemetry Observation Research addition:
+      // Observe receipt transmission after successful completion.
+      try {
+        val researchTriggerCategory = when {
+          message.reaction != null -> ReceiptTriggerCategory.REACTION
+          message.hasRemoteDelete || message.adminDelete != null -> ReceiptTriggerCategory.DELETE
+          message.isMediaMessage || message.body != null -> ReceiptTriggerCategory.MESSAGE
+          else -> ReceiptTriggerCategory.OTHER
+        }
+
+        val researchEvent = ReceiptSecurityEvent(
+          receiptType = ReceiptType.DELIVERY,
+          triggerCategory = researchTriggerCategory,
+          peerId = senderRecipient.id.serialize(),
+          peerDisplayName = senderRecipient.getDisplayName(context),
+          messageId = messageId.id.toString(),
+          observedAtMillis = SystemClock.elapsedRealtime()
+        )
+
+        SignalDatabase.runPostSuccessfulTransaction {
+          try {
+            Log.i(INFO_TAG, "Sending security event: receipt delivery");
+            SecurityTelemetryEngine.submitEvent(researchEvent)
+          } catch (e: Exception) {
+            Log.w(ERROR_TAG, "Receipt telemetry submission failed", e)
+          }
+        }
+      } catch (e: Exception) {
+        Log.w(ERROR_TAG, "Receipt telemetry capture failed", e)
+      }
+      // End Security Telemetry Observation Research addition
+      
+      
+      
     } else if (!metadata.sealedSender) {
       if (RecipientUtil.shouldHaveProfileKey(threadRecipient)) {
         Log.w(MessageContentProcessor.TAG, "Received an unsealed sender message from " + senderRecipient.id + ", but they should already have our profile key. Correcting.")

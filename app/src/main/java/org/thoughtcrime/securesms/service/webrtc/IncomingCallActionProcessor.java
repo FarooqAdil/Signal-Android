@@ -39,6 +39,11 @@ import java.util.Objects;
 
 import static org.thoughtcrime.securesms.webrtc.CallNotificationBuilder.TYPE_INCOMING_RINGING;
 
+// Security Telemetry Observation Research addition: imports
+import org.thoughtcrime.securesms.research.security.observation.ResearchCallTelemetry;
+import static org.thoughtcrime.securesms.research.security.observation.SecurityTelemetryEngineKt.INFO_TAG;
+// End Security Telemetry Observation Research addition
+
 /**
  * Responsible for setting up and managing the start of an incoming 1:1 call. Transitioned
  * to from idle or pre-join and can either move to a connected state (user picks up) or
@@ -155,6 +160,12 @@ public class IncomingCallActionProcessor extends DeviceAwareActionProcessor {
                                .accepted(true)
                                .waitForAudio(true)
                                .build();
+   
+    // Security Telemetry Observation Research addition:
+    // Observe local acceptance after Signal records it.
+    Log.i(INFO_TAG, "Sending security event: call accepted");
+    ResearchCallTelemetry.callAccepted(activePeer.getCallId().longValue(), activePeer.getId().serialize());
+    // End Security Telemetry Observation Research addition
 
     webRtcInteractor.prepareAudioForAccept();
 

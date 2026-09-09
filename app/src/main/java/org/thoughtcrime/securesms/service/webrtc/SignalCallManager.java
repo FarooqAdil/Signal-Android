@@ -124,6 +124,12 @@ import static org.thoughtcrime.securesms.events.WebRtcViewModel.State.NO_SUCH_US
 import static org.thoughtcrime.securesms.events.WebRtcViewModel.State.UNTRUSTED_IDENTITY;
 import static org.thoughtcrime.securesms.service.webrtc.WebRtcUtil.getUrgencyFromCallUrgency;
 
+// Security Telemetry Observation Research addition: imports
+import org.thoughtcrime.securesms.research.security.observation.ResearchCallTelemetry;
+import static org.thoughtcrime.securesms.research.security.observation.SecurityTelemetryEngineKt.INFO_TAG;
+// End Security Telemetry Observation Research addition
+
+
 /**
  * Entry point for all things calling. Lives for the life of the app instance and will spin up a foreground service when needed to
  * handle "active" calls.
@@ -610,6 +616,12 @@ public final class SignalCallManager implements CallManager.Observer, GroupCall.
       }
 
       remotePeer.setCallId(callId);
+      
+      // Security Telemetry Observation Research addition:
+      // Record call start with call direction and peer id.
+      Log.i(INFO_TAG, "Sending security event: call started");
+      ResearchCallTelemetry.callStarted(callId.longValue(), isOutgoing, remotePeer.getId().serialize());
+      // End Security Telemetry Observation Research addition
 
       if (isOutgoing) {
         return p.handleStartOutgoingCall(s, remotePeer, WebRtcUtil.getOfferTypeFromCallMediaType(callMediaType));

@@ -23,6 +23,11 @@ import org.thoughtcrime.securesms.service.webrtc.state.WebRtcServiceState;
 import java.util.Collections;
 import java.util.Optional;
 
+// Security Telemetry Observation Research addition: imports
+import org.thoughtcrime.securesms.research.security.observation.ResearchCallTelemetry;
+import static org.thoughtcrime.securesms.research.security.observation.SecurityTelemetryEngineKt.INFO_TAG;
+// End Security Telemetry Observation Research addition
+
 /**
  * Handles action for a connected/ongoing call. At this point it's mostly responding
  * to user actions (local and remote) on video/mic and adjusting accordingly.
@@ -49,6 +54,14 @@ public class ConnectedCallActionProcessor extends DeviceAwareActionProcessor {
 
     try {
       webRtcInteractor.getCallManager().setVideoEnable(enable, false);
+      // Security Telemetry Observation Research addition:
+      // Observe outgoing video change/resume.
+      RemotePeer researchPeer = currentState.getCallInfoState().getActivePeer();
+      if (researchPeer != null) {
+        Log.i(INFO_TAG, "Sending security event: video tx");
+        ResearchCallTelemetry.videoTx(researchPeer.getCallId().longValue(), enable, researchPeer.getId().serialize());
+      }
+      // End Security Telemetry Observation Research addition
     } catch (CallException e) {
       return callFailure(currentState, "setVideoEnable() failed: ", e);
     }
@@ -76,6 +89,14 @@ public class ConnectedCallActionProcessor extends DeviceAwareActionProcessor {
 
     try {
       webRtcInteractor.getCallManager().setAudioEnable(currentState.getLocalDeviceState().isMicrophoneEnabled());
+      // Security Telemetry Observation Research addition:
+      // Observe outgoing audio change/resume.
+      RemotePeer researchPeer = currentState.getCallInfoState().getActivePeer();
+      if (researchPeer != null) {
+        Log.i(INFO_TAG, "Sending security event: audio tx");
+        ResearchCallTelemetry.audioTx(researchPeer.getCallId().longValue(), currentState.getLocalDeviceState().isMicrophoneEnabled(), researchPeer.getId().serialize());
+      }
+      // End Security Telemetry Observation Research addition
     } catch (CallException e) {
       return callFailure(currentState, "Enabling audio failed: ", e);
     }

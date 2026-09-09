@@ -13,6 +13,10 @@ import android.app.PendingIntent
 import android.content.pm.PackageManager
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
+import android.widget.LinearLayout
+import android.widget.ScrollView
+import android.widget.Switch
+import android.widget.TextView
 import org.signal.core.util.PendingIntentFlags
 import org.thoughtcrime.securesms.R
 import org.thoughtcrime.securesms.notifications.NotificationChannels
@@ -85,6 +89,7 @@ private fun showNext(activity: Activity) {
 private fun showFinding(activity: Activity, finding: SecurityFinding) {
   val queuedFindings = SecurityFindingQueue.size()
   var closeAllRequested = false
+  val actionSwitches = mutableMapOf<FindingAction, Switch>()
     
     
   val actions = if (finding.possibleActions.isEmpty()) {
@@ -110,15 +115,15 @@ private fun showFinding(activity: Activity, finding: SecurityFinding) {
     }
   }
 
+  val findingMessage = 
+    "${finding.title}\n\n" +
+    "${finding.explanation}\n\n" +
+    "Detection at time ${finding.observationTime}\n\n" +
+    "[Available Actions:]\n${actions}\n\n" +
+    "[Developer Details:]\n${finding.developerDetails}"
+  
   val dialogBuilder = MaterialAlertDialogBuilder(activity)
     .setTitle("$dialogTitle [${finding.findingId.take(7)}]")
-    .setMessage(
-      "${finding.title}\n\n" +
-      "${finding.explanation}\n\n" +
-      "Detection at time ${finding.observationTime}\n\n" +
-      "[Available Actions:]\n${actions}\n\n" +
-      "[Developer Details:]\n${finding.developerDetails}"
-    )
     .setPositiveButton("Close") { _, _ ->
       Log.i(logTag, "$findingLabel finding dismissed: " +
               "${finding.title}: ${finding.findingId.take(7)} - ${finding.detectorId}")
@@ -136,6 +141,40 @@ private fun showFinding(activity: Activity, finding: SecurityFinding) {
       }
     }
   
+  if (finding.possibleActions.isEmpty()) {
+    dialogBuilder.setMessage(findingMessage)
+  } else {
+    val content = LinearLayout(activity)
+    content.orientation = LinearLayout.VERTICAL
+    content.setPadding(48, 16, 48, 16)
+
+    val messageView = TextView(activity)
+    messageView.text = findingMessage
+    content.addView(messageView)
+
+    for (action in FindingAction.entries) {
+      if (action !in finding.possibleActions) {
+        continue
+      }
+
+      val actionSwitch = Switch(activity)
+      actionSwitch.text = actionLabel(action)
+      actionSwitch.isChecked = initialActionState(action)
+
+      actionSwitches[action] = actionSwitch
+      content.addView(actionSwitch)
+    }
+
+    val scrollView = ScrollView(activity)
+    scrollView.addView(content)
+
+    dialogBuilder.setView(scrollView)
+
+    dialogBuilder.setNegativeButton("Apply") { _, _ ->
+      logFindingActions(finding, actionSwitches)
+    }
+  }
+    
   if (queuedFindings > 0) {
     dialogBuilder.setNeutralButton("Close all (${queuedFindings+1})") { _, _ ->
       closeAllRequested = true
@@ -156,6 +195,72 @@ private fun showFinding(activity: Activity, finding: SecurityFinding) {
 
   Log.i(logTag, "$findingLabel finding shown: " +
           "${finding.title}: ${finding.findingId.take(7)} - ${finding.detectorId}")
+}
+
+// Returns the current global default for an action
+private fun initialActionState(action: FindingAction): Boolean {
+  return when (action) {
+    FindingAction.REPORT_INCIDENT -> FrameworkConfig.Production.basicReporting
+    FindingAction.REPORT_USER -> FrameworkConfig.Production.reportUsers
+    FindingAction.BLOCK_USER -> false
+    FindingAction.SHARE_LOGS -> FrameworkConfig.Production.shareLogs
+    FindingAction.SHARE_TELEMETRY -> FrameworkConfig.Production.shareFullTelemetry
+  }
+}
+
+private fun actionLabel(action: FindingAction): String {
+  return when (action) {
+    FindingAction.REPORT_INCIDENT -> "Report incident"
+    FindingAction.REPORT_USER -> "Report user"
+    FindingAction.BLOCK_USER -> "Block user"
+    FindingAction.SHARE_LOGS -> "Share logs"
+    FindingAction.SHARE_TELEMETRY -> "Share telemetry"
+  }
+}
+
+// Simulates the selected reporting/sharing actions for this finding
+private fun logFindingActions(finding: SecurityFinding, actionSwitches: Map<FindingAction, Switch>) {
+  val findingId = finding.findingId.take(7)
+
+  val selectedActions = actionSwitches.filterValues { it.isChecked } .keys
+
+  Log.i(INFO_TAG, "Finding $findingId action selection: " + actionSwitches.entries.joinToString(", ") { "${it.key}=${it.value.isChecked}"})
+
+  for (action in selectedActions) {
+    val metadata = finding.actionMetadata[action]
+      ?.joinToString(" / ")
+      ?: "No additional metadata"
+
+    when (action) {
+      FindingAction.REPORT_USER -> {Log.i(INFO_TAG,
+          "Share/Report/Action - Report User: $metadata")}
+
+      FindingAction.BLOCK_USER -> {Log.i(INFO_TAG,
+          "Share/Report/Action - Block User: $metadata. PoC limitation: blocking simulated only.")}
+
+      FindingAction.REPORT_INCIDENT -> {Log.i(INFO_TAG,
+          "Share/Report/Action - Report Incident: \n" +
+            "finding=$findingId; \n" +
+            "detector=${finding.detectorId}; \n" +
+            "title=${finding.title}; \n" +
+            "explanation=${finding.explanation}; \n" +
+            "details=${finding.developerDetails}; \n" +
+            "observationTime=${finding.observationTime}. \n" +
+            "PoC limitation: incident report simulated as sent.\n")}
+
+      FindingAction.SHARE_LOGS -> {Log.i(INFO_TAG,
+          "Share/Report/Action - Share Logs: \n PoC limitation: assume this finding and relevant logs were shared."
+        )
+      }
+
+      FindingAction.SHARE_TELEMETRY -> {Log.i(INFO_TAG,
+          "Share/Report/Action - Share Telemetry: \n" +
+            "[RRD] Receipt-window timestamps(ms)=$metadata; " +
+            "observationTime=${finding.observationTime}; \n" +
+            "details=${finding.developerDetails}. \n" +
+            "PoC limitation: assume relevant telemetry was shared and sent.\n")}
+    }
+  }
 }
 
 // returns whether the security dialog is showing

@@ -15,6 +15,11 @@ import org.thoughtcrime.securesms.webrtc.locks.LockManager;
 
 import static org.thoughtcrime.securesms.webrtc.CallNotificationBuilder.TYPE_ESTABLISHED;
 
+// Security Telemetry Observation Research addition: imports
+import org.thoughtcrime.securesms.research.security.observation.ResearchCallTelemetry;
+import static org.thoughtcrime.securesms.research.security.observation.SecurityTelemetryEngineKt.INFO_TAG;
+// End Security Telemetry Observation Research addition
+
 /**
  * Encapsulates the shared logic to setup a 1:1 call. Setup primarily includes retrieving turn servers and
  * transitioning to the connected state. Other action processors delegate the appropriate action to it but it is
@@ -75,7 +80,17 @@ public class CallSetupActionProcessorDelegate extends WebRtcActionProcessor {
     try {
       CallManager callManager = webRtcInteractor.getCallManager();
       callManager.setAudioEnable(currentState.getLocalDeviceState().isMicrophoneEnabled());
+      // Security Telemetry Observation Research addition:
+      // Observe the outgoing audio start.
+      Log.i(INFO_TAG, "Sending security event: audio tx");
+      ResearchCallTelemetry.audioTx(activePeer.getCallId().longValue(), currentState.getLocalDeviceState().isMicrophoneEnabled(), activePeer.getId().serialize());
+      // End Security Telemetry Observation Research addition
       callManager.setVideoEnable(currentState.getLocalDeviceState().getCameraState().isEnabled(), false);
+      // Security Telemetry Observation Research addition:
+      // Observe the outgoing video start.
+      Log.i(INFO_TAG, "Sending security event: video tx");
+      ResearchCallTelemetry.videoTx(activePeer.getCallId().longValue(), currentState.getLocalDeviceState().getCameraState().isEnabled(), activePeer.getId().serialize());
+      // End Security Telemetry Observation Research addition
     } catch (CallException e) {
       return callFailure(currentState, "Enabling audio/video failed: ", e);
     }
@@ -113,6 +128,14 @@ public class CallSetupActionProcessorDelegate extends WebRtcActionProcessor {
       try {
         CallManager callManager = webRtcInteractor.getCallManager();
         callManager.setVideoEnable(enable, false);
+        // Security Telemetry Observation Research addition:
+        // Observe the outgoing video resume.
+        Log.i(INFO_TAG, "Sending security event: video tx");
+        RemotePeer researchPeer = currentState.getCallInfoState().getActivePeer();
+        if (researchPeer != null) {
+          ResearchCallTelemetry.videoTx(researchPeer.getCallId().longValue(), enable, researchPeer.getId().serialize());
+        }
+        // End Security Telemetry Observation Research addition
       } catch (CallException e) {
         Log.w(tag, "Unable change video enabled state to " + enable, e);
       }

@@ -18,6 +18,7 @@ internal object FrameworkConfigDialog {
     "[PROD] Share security-relevant events",
     "[DEV] Show negative findings",
     "[DEV] Fire framework self-test (20s)",
+    "[DEV] Fire framework synthetic evaluation",
     "[SIM] Simulate receipt overload"
   )
 
@@ -35,6 +36,7 @@ internal object FrameworkConfigDialog {
       FrameworkConfig.Production.shareLogs,
       FrameworkConfig.Production.shareFullTelemetry,
       FrameworkConfig.Development.showNegativeFindings,
+      false,
       false,
       FrameworkConfig.Simulate.receiptOverload
     )
@@ -74,7 +76,11 @@ internal object FrameworkConfigDialog {
       Log.i(INFO_TAG, "Framework self-test requested from config dialog")
       SecuritySimulationController.fireSelfTest()
     }
-    FrameworkConfig.Simulate.receiptOverload = selected[8]
+    if (selected[8]) {
+      Log.i(INFO_TAG, "Synthetic security evaluation requested from config dialog")
+      SecurityEvaluationController.runSelectedEvaluation()
+    }
+    FrameworkConfig.Simulate.receiptOverload = selected[9]
 
     Log.i(INFO_TAG, "Config applied")
   }

@@ -36,6 +36,18 @@ import org.whispersystems.signalservice.internal.push.DataMessage
 import org.whispersystems.signalservice.internal.push.Envelope
 import org.whispersystems.signalservice.internal.util.Util
 
+// Security Telemetry Observation Research addition: imports
+import android.os.SystemClock
+import org.signal.core.util.logging.Log
+import org.thoughtcrime.securesms.research.security.observation.ERROR_TAG
+import org.thoughtcrime.securesms.research.security.observation.INFO_TAG
+import org.thoughtcrime.securesms.research.security.observation.ReceiptSecurityEvent
+import org.thoughtcrime.securesms.research.security.observation.ReceiptTriggerCategory
+import org.thoughtcrime.securesms.research.security.observation.ReceiptType
+import org.thoughtcrime.securesms.research.security.observation.SecurityTelemetryEngine
+// End Security Telemetry Observation Research addition
+
+
 object EditMessageProcessor {
   fun process(
     context: Context,
@@ -98,6 +110,32 @@ object EditMessageProcessor {
 
     if (insertResult != null) {
       batchCache.addDeliveryReceipt(senderRecipient.id, groupId, message.timestamp!!, MessageId(insertResult.messageId))
+      
+      // Security Telemetry Observation Research addition:
+      // Observe edit receipt transmission after successful completion.
+      try {
+        val researchEvent = ReceiptSecurityEvent(
+          receiptType = ReceiptType.DELIVERY,
+          triggerCategory = ReceiptTriggerCategory.EDIT,
+          peerId = senderRecipient.id.serialize(),
+          peerDisplayName = senderRecipient.getDisplayName(context),
+          messageId = insertResult.messageId.toString(),
+          observedAtMillis = SystemClock.elapsedRealtime()
+        )
+
+        SignalDatabase.runPostSuccessfulTransaction {
+          try {
+            Log.i(INFO_TAG, "Sending security event: message edit receipt delivery");
+            SecurityTelemetryEngine.submitEvent(researchEvent)
+          } catch (e: Exception) {
+            Log.w(ERROR_TAG, "Edit receipt telemetry submission failed", e)
+          }
+        }
+      } catch (e: Exception) {
+        Log.w(ERROR_TAG, "Edit receipt telemetry capture failed", e)
+      }
+      // End Security Telemetry Observation Research addition
+
 
       if (insertResult.needsThreadUpdate) {
         batchCache.addIncomingMessageInsertThreadUpdate(insertResult.threadId)

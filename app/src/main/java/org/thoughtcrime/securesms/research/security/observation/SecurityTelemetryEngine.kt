@@ -32,8 +32,8 @@ object SecurityTelemetryEngine {
     
     // Register Detectors
     detectors.add(DevTestDetector)
-    //detectors.add(ReceiptDetector)
-    //detectors.add(MediaConsentDetector)
+    detectors.add(ReceiptRateDetector)
+    detectors.add(MediaConsentDetector)
     Log.i(INFO_TAG, "Detector registration complete: ${detectors.size} detector(s)")
     
     //Production demo mode:

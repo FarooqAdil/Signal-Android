@@ -29,7 +29,11 @@ internal object DevTestDetector : SecurityDetector {
           "Requested: ${event.requestedAtMillis}\n" +
           "Fired: ${event.firedAtMillis}\n" +
           "Actual delay: ${actualDelay}ms",
-        possibleActions = emptySet()
+        possibleActions = FindingAction.entries.toSet(),
+        actionMetadata = mapOf(
+          FindingAction.REPORT_USER to listOf("dev-test-peer"),
+          FindingAction.BLOCK_USER to listOf("dev-test-peer")
+        ),
       )
     )
   }
